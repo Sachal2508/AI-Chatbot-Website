@@ -13,7 +13,7 @@ import * as Sentry from '@sentry/node';
 export class SentryExceptionFilter implements ExceptionFilter {
   private readonly logger = new Logger('ExceptionFilter');
 
-  catch(exception: unknown, host: ArgumentsHost) {
+  async catch(exception: unknown, host: ArgumentsHost) {
     const ctx = host.switchToHttp();
     const response = ctx.getResponse<Response>();
     const request = ctx.getRequest<Request>();
@@ -38,6 +38,7 @@ export class SentryExceptionFilter implements ExceptionFilter {
           body: request.body,
         },
       });
+      await Sentry.flush(2000);
     }
 
     this.logger.error(
