@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Chatbot API | Powered by NestJS + Groq + Resend</title>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <style>
+    :root {
+      --bg-dark: #090d16;
+      --bg-card: rgba(18, 24, 40, 0.75);
+      --bg-card-hover: rgba(28, 36, 58, 0.85);
+      --border-color: rgba(255, 255, 255, 0.08);
+      --border-bright: rgba(99, 102, 241, 0.3);
+      --accent-primary: #6366f1;
+      --accent-secondary: #a855f7;
+      --accent-cyan: #06b6d4;
+      --text-main: #f3f4f6;
+      --text-muted: #9ca3af;
+      --user-msg-bg: linear-gradient(135deg, #4f46e5, #7c3aed);
+      --bot-msg-bg: rgba(30, 41, 59, 0.8);
+      --danger-color: #ef4444;
+      --success-color: #10b981;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(99, 102, 241, 0.15) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(168, 85, 247, 0.15) 0%, transparent 40%);
+    }
+
+    /* Header */
+    header {
+      padding: 1.25rem 2rem;
+      background: rgba(9, 13, 22, 0.8);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border-color);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .brand-icon {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.25rem;
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.4);
+    }
+
+    .brand-text h1 {
+      font-family: 'Outfit', sans-serif;
+      font-size: 1.25rem;
+      font-weight: 700;
+      background: linear-gradient(to right, #fff, #a5b4fc);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .brand-text p {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .btn {
+      padding: 0.5rem 1rem;
+      border-radius: 8px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border: 1px solid var(--border-color);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-main);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      transition: all 0.2s ease;
+      text-decoration: none;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: var(--border-bright);
+      transform: translateY(-1px);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border: none;
+      box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
+    }
+
+    .btn-primary:hover {
+      opacity: 0.95;
+      box-shadow: 0 6px 16px rgba(99, 102, 241, 0.4);
+    }
+
+    .btn-danger {
+      background: rgba(239, 68, 68, 0.15);
+      border-color: rgba(239, 68, 68, 0.3);
+      color: #fca5a5;
+    }
+
+    .btn-danger:hover {
+      background: rgba(239, 68, 68, 0.25);
+      border-color: rgba(239, 68, 68, 0.5);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      max-width: 1000px;
+      width: 100%;
+      margin: 2rem auto;
+      padding: 0 1.5rem;
+      display: flex;
+      flex-direction: column;
+      gap: 1.5rem;
+    }
+
+    /* Top Controls Bar */
+    .controls-bar {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 1rem 1.5rem;
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      align-items: center;
+      gap: 1rem;
+    }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      background: rgba(255, 255, 255, 0.03);
+      padding: 0.4rem 0.8rem;
+      border-radius: 20px;
+      border: 1px solid var(--border-color);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background-color: var(--success-color);
+      box-shadow: 0 0 10px var(--success-color);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { opacity: 0.6; }
+      50% { opacity: 1; }
+      100% { opacity: 0.6; }
+    }
+
+    .action-group {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    /* Chat Container */
+    .chat-box {
+      flex: 1;
+      min-height: 480px;
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 20px;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .chat-messages {
+      flex: 1;
+      padding: 1.5rem;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 1.25rem;
+      max-height: 520px;
+    }
+
+    .message {
+      display: flex;
+      gap: 1rem;
+      max-width: 85%;
+      animation: fadeIn 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .message.user {
+      align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+
+    .message.assistant {
+      align-self: flex-start;
+    }
+
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.9rem;
+      flex-shrink: 0;
+    }
+
+    .message.user .avatar {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+    }
+
+    .message.assistant .avatar {
+      background: linear-gradient(135deg, var(--accent-secondary), var(--accent-cyan));
+    }
+
+    .message-content {
+      background: var(--bot-msg-bg);
+      border: 1px solid var(--border-color);
+      padding: 0.9rem 1.25rem;
+      border-radius: 16px;
+      font-size: 0.95rem;
+      line-height: 1.55;
+      white-space: pre-wrap;
+      position: relative;
+    }
+
+    .message.user .message-content {
+      background: var(--user-msg-bg);
+      border: none;
+      color: #ffffff;
+      border-bottom-right-radius: 4px;
+    }
+
+    .message.assistant .message-content {
+      border-bottom-left-radius: 4px;
+      color: var(--text-main);
+    }
+
+    .message-meta {
+      font-size: 0.7rem;
+      color: var(--text-muted);
+      margin-top: 0.4rem;
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    /* Typing Indicator */
+    .typing-indicator {
+      display: none;
+      align-self: flex-start;
+      gap: 0.5rem;
+      align-items: center;
+      padding: 0.75rem 1.25rem;
+      background: var(--bot-msg-bg);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+    }
+
+    .typing-indicator span {
+      width: 6px;
+      height: 6px;
+      background: var(--accent-primary);
+      border-radius: 50%;
+      animation: bounce 1.4s infinite ease-in-out both;
+    }
+
+    .typing-indicator span:nth-child(1) { animation-delay: -0.32s; }
+    .typing-indicator span:nth-child(2) { animation-delay: -0.16s; }
+
+    @keyframes bounce {
+      0%, 80%, 100% { transform: scale(0); }
+      40% { transform: scale(1); }
+    }
+
+    /* Input Box */
+    .chat-input-container {
+      padding: 1.25rem;
+      background: rgba(13, 18, 30, 0.9);
+      border-top: 1px solid var(--border-color);
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+
+    .chat-input {
+      flex: 1;
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--border-color);
+      border-radius: 12px;
+      padding: 0.9rem 1.25rem;
+      color: var(--text-main);
+      font-family: inherit;
+      font-size: 0.95rem;
+      outline: none;
+      transition: all 0.2s ease;
+    }
+
+    .chat-input:focus {
+      border-color: var(--accent-primary);
+      background: rgba(255, 255, 255, 0.07);
+      box-shadow: 0 0 15px rgba(99, 102, 241, 0.2);
+    }
+
+    .send-btn {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+      border: none;
+      color: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+
+    .send-btn:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 15px rgba(99, 102, 241, 0.4);
+    }
+
+    /* Modal */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.75);
+      backdrop-filter: blur(8px);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal {
+      background: #111827;
+      border: 1px solid var(--border-bright);
+      border-radius: 20px;
+      padding: 2rem;
+      max-width: 450px;
+      width: 90%;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+    }
+
+    .modal h3 {
+      font-family: 'Outfit', sans-serif;
+      margin-bottom: 0.5rem;
+    }
+
+    .modal p {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      margin-bottom: 1.25rem;
+    }
+
+    .modal-input {
+      width: 100%;
+      padding: 0.8rem 1rem;
+      border-radius: 10px;
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--border-color);
+      color: white;
+      margin-bottom: 1.25rem;
+      outline: none;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+
+    /* Toast Notification */
+    .toast {
+      position: fixed;
+      bottom: 2rem;
+      right: 2rem;
+      padding: 0.9rem 1.4rem;
+      border-radius: 12px;
+      background: #1f2937;
+      border: 1px solid var(--border-color);
+      color: white;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.4);
+      transform: translateY(100px);
+      opacity: 0;
+      transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 2000;
+    }
+
+    .toast.show {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Header -->
+  <header>
+    <div class="brand">
+      <div class="brand-icon">
+        <i class="fa-solid fa-robot"></i>
+      </div>
+      <div class="brand-text">
+        <h1>AI Automation Chatbot</h1>
+        <p>NestJS • Groq LLM • Resend Email • Sentry</p>
+      </div>
+    </div>
+    <div class="header-actions">
+      <a href="/docs" target="_blank" class="btn">
+        <i class="fa-solid fa-book-bookmark"></i> Swagger Docs
+      </a>
+      <button class="btn btn-danger" onclick="triggerSentryError()">
+        <i class="fa-solid fa-bug"></i> Test Sentry Error
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main>
+
+    <!-- Controls Bar -->
+    <div class="controls-bar">
+      <div class="status-badge">
+        <div class="status-dot"></div>
+        <span>Model: <strong>llama-3.3-70b-versatile</strong> (Groq)</span>
+      </div>
+
+      <div class="action-group">
+        <button class="btn" onclick="openEmailSummaryModal()">
+          <i class="fa-solid fa-envelope-open-text"></i> Email Chat Summary
+        </button>
+        <button class="btn" onclick="sendTestEmail()">
+          <i class="fa-solid fa-paper-plane"></i> Send Test Email
+        </button>
+        <button class="btn" onclick="clearChat()">
+          <i class="fa-solid fa-trash-can"></i> Clear Chat
+        </button>
+      </div>
+    </div>
+
+    <!-- Chat Box -->
+    <div class="chat-box">
+      <div class="chat-messages" id="chatMessages">
+        <!-- Initial Welcome Message -->
+        <div class="message assistant">
+          <div class="avatar"><i class="fa-solid fa-bot"></i></div>
+          <div>
+            <div class="message-content">
+              Hello! 👋 I'm your AI Assistant powered by <strong>Groq (Llama 3.3 70B)</strong> & <strong>NestJS</strong>.<br><br>
+              How can I assist you today? You can ask me anything or click <strong>Email Chat Summary</strong> above to test emailing our conversation via Resend!
+            </div>
+            <div class="message-meta">Just now</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Typing Indicator -->
+      <div class="typing-indicator" id="typingIndicator">
+        <span></span><span></span><span></span>
+        <span style="font-size:0.75rem; color:var(--text-muted); margin-left:0.5rem;">AI is thinking...</span>
+      </div>
+
+      <!-- Input Area -->
+      <div class="chat-input-container">
+        <input type="text" class="chat-input" id="userInput" placeholder="Type your message here..." onkeypress="handleKeyPress(event)" />
+        <button class="send-btn" onclick="sendMessage()">
+          <i class="fa-solid fa-arrow-up"></i>
+        </button>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Modal for Email Summary -->
+  <div class="modal-overlay" id="emailModal">
+    <div class="modal">
+      <h3><i class="fa-solid fa-envelope"></i> Email Chat Summary</h3>
+      <p>Send an AI-generated bulleted summary of this conversation via Resend.</p>
+      <input type="email" class="modal-input" id="emailInput" value="campushub905@gmail.com" placeholder="Recipient email address" />
+      <div style="font-size:0.75rem; color:#f59e0b; margin-bottom:1rem;">
+        <i class="fa-solid fa-triangle-exclamation"></i> Note: Resend test domain permits sending to your registered account email (campushub905@gmail.com).
+      </div>
+      <div class="modal-actions">
+        <button class="btn" onclick="closeEmailModal()">Cancel</button>
+        <button class="btn btn-primary" onclick="submitEmailSummary()">Send Summary</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification -->
+  <div class="toast" id="toast">
+    <i class="fa-solid fa-circle-check" id="toastIcon" style="color:var(--success-color);"></i>
+    <span id="toastMessage">Action completed successfully</span>
+  </div>
+
+  <script>
+    const conversationHistory = [];
+
+    function handleKeyPress(event) {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+
+    async function sendMessage() {
+      const input = document.getElementById('userInput');
+      const text = input.value.trim();
+      if (!text) return;
+
+      // Add user message to UI
+      appendMessage('user', text);
+      input.value = '';
+
+      // Update local history
+      conversationHistory.push({ role: 'user', content: text });
+
+      // Show typing indicator
+      const typing = document.getElementById('typingIndicator');
+      typing.style.display = 'flex';
+      scrollChatToBottom();
+
+      try {
+        const response = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            message: text,
+            history: conversationHistory.slice(0, -1) // send previous history
+          })
+        });
+
+        const data = await response.json();
+        typing.style.display = 'none';
+
+        if (response.ok && data.reply) {
+          appendMessage('assistant', data.reply, data.tokensUsed);
+          conversationHistory.push({ role: 'assistant', content: data.reply });
+        } else {
+          appendMessage('assistant', `⚠️ Error: ${data.message || 'Failed to get response'}`);
+        }
+      } catch (err) {
+        typing.style.display = 'none';
+        appendMessage('assistant', '⚠️ Network error. Please check server status.');
+      }
+    }
+
+    function appendMessage(role, content, tokens = null) {
+      const chatMessages = document.getElementById('chatMessages');
+      const msgDiv = document.createElement('div');
+      msgDiv.className = `message ${role}`;
+
+      const icon = role === 'user' ? 'fa-user' : 'fa-robot';
+      const metaText = role === 'user' ? 'You' : `AI Assistant ${tokens ? `• ${tokens} tokens` : ''}`;
+
+      msgDiv.innerHTML = `
+        <div class="avatar"><i class="fa-solid ${icon}"></i></div>
+        <div>
+          <div class="message-content">${escapeHtml(content)}</div>
+          <div class="message-meta">${metaText}</div>
+        </div>
+      `;
+
+      chatMessages.appendChild(msgDiv);
+      scrollChatToBottom();
+    }
+
+    function clearChat() {
+      conversationHistory.length = 0;
+      document.getElementById('chatMessages').innerHTML = `
+        <div class="message assistant">
+          <div class="avatar"><i class="fa-solid fa-bot"></i></div>
+          <div>
+            <div class="message-content">Chat history cleared! How can I help you next?</div>
+            <div class="message-meta">Just now</div>
+          </div>
+        </div>
+      `;
+      showToast('Chat history cleared', 'info');
+    }
+
+    function openEmailSummaryModal() {
+      if (conversationHistory.length === 0) {
+        showToast('Please have a short conversation first before emailing summary!', 'warning');
+        return;
+      }
+      document.getElementById('emailModal').style.display = 'flex';
+    }
+
+    function closeEmailModal() {
+      document.getElementById('emailModal').style.display = 'none';
+    }
+
+    async function submitEmailSummary() {
+      const email = document.getElementById('emailInput').value.trim();
+      if (!email) return;
+
+      closeEmailModal();
+      showToast('Summarizing conversation & sending email...', 'info');
+
+      try {
+        const res = await fetch('/api/email/summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: email,
+            conversation: conversationHistory
+          })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Summary email sent to ${email}! 📬`, 'success');
+        } else {
+          showToast(`Error: ${data.message || 'Failed to send email'}`, 'error');
+        }
+      } catch (err) {
+        showToast('Failed to send email. Check network.', 'error');
+      }
+    }
+
+    async function sendTestEmail() {
+      const email = prompt("Enter recipient email address for test email:", "campushub905@gmail.com");
+      if (!email) return;
+
+      showToast('Sending test email...', 'info');
+
+      try {
+        const res = await fetch('/api/email/test', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ to: email })
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          showToast(`Test email sent to ${email}! ✅`, 'success');
+        } else {
+          showToast(`Error: ${data.message || 'Failed to send test email'}`, 'error');
+        }
+      } catch (err) {
+        showToast('Failed to send test email.', 'error');
+      }
+    }
+
+    async function triggerSentryError() {
+      if (confirm("This action will deliberately trigger a 500 error on the server to demonstrate Sentry error monitoring. Continue?")) {
+        try {
+          const res = await fetch('/debug-sentry');
+          const data = await res.json();
+          showToast('Triggered 500 error! Check your Sentry Dashboard. 🎯', 'warning');
+        } catch (err) {
+          showToast('Triggered 500 error! Captured by Sentry 🎯', 'warning');
+        }
+      }
+    }
+
+    function showToast(message, type = 'success') {
+      const toast = document.getElementById('toast');
+      const toastMessage = document.getElementById('toastMessage');
+      const toastIcon = document.getElementById('toastIcon');
+
+      toastMessage.innerText = message;
+
+      if (type === 'success') {
+        toastIcon.className = 'fa-solid fa-circle-check';
+        toastIcon.style.color = 'var(--success-color)';
+      } else if (type === 'error') {
+        toastIcon.className = 'fa-solid fa-circle-xmark';
+        toastIcon.style.color = 'var(--danger-color)';
+      } else if (type === 'warning') {
+        toastIcon.className = 'fa-solid fa-triangle-exclamation';
+        toastIcon.style.color = '#f59e0b';
+      } else {
+        toastIcon.className = 'fa-solid fa-circle-info';
+        toastIcon.style.color = 'var(--accent-primary)';
+      }
+
+      toast.classList.add('show');
+      setTimeout(() => toast.classList.remove('show'), 4000);
+    }
+
+    function scrollChatToBottom() {
+      const chatMessages = document.getElementById('chatMessages');
+      chatMessages.scrollTop = chatMessages.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+      return text
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+    }
+  </script>
+</body>
+</html>
